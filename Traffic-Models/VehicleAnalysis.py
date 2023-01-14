@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 from ast import main
@@ -12,11 +12,11 @@ import threading
 import os
 
 
-# In[ ]:
+# In[2]:
 
 
 # Default values of signal times
-defaultRed = 150
+defaultRed = 195
 defaultYellow = 5
 defaultGreen = 20
 defaultMinimum = 10
@@ -24,11 +24,11 @@ defaultMaximum = 60
 
 signals = []
 noOfSignals = 4
-simTime = 300       # total simulation time
+simTime = 400       # total simulation time
 timeElapsed = 0
 
 
-# In[ ]:
+# In[3]:
 
 
 currentGreen = 0   # Indicates which signal is green
@@ -41,12 +41,12 @@ currentYellow = 0   # Indicates whether yellow signal is on or off
 # Average times for vehicles to pass the intersection
 carTime = 2
 bikeTime = 1
-rickshawTime = 2
+rickshawTime = 2.5
 busTime = 3
 truckTime = 3
 
 
-# In[ ]:
+# In[4]:
 
 
 # Count of vehicles at a traffic signal
@@ -58,14 +58,14 @@ noOfRickshaws = 0
 noOfLanes = 2
 
 
-# In[ ]:
+# In[5]:
 
 
 # Red signal time at which vehicles will be detected at a signal (when detection will start running)
 detectionTime = 5
 
 
-# In[ ]:
+# In[6]:
 
 
 vehicles = {'right': {'road': [], 'crossed': 0}, 'down': {'road': [], 'crossed': 0},
@@ -76,11 +76,11 @@ vehicleTypes = {0: 'car', 1: 'bus', 2: 'truck', 3: 'rickshaw', 4: 'bike'}
 directionNumbers = {0: 'right', 1: 'down', 2: 'left', 3: 'up'}
 
 
-# In[ ]:
+# In[7]:
 
 
 class TrafficSignal:
-    def __init__(self, red, yellow, green, minimum, maximum):
+    def __init__(self, red, yellow, green, minimum=0, maximum=0):
         self.red = red
         self.yellow = yellow
         self.green = green
@@ -89,7 +89,7 @@ class TrafficSignal:
         self.totalGreenTime = 0
 
 
-# In[ ]:
+# In[8]:
 
 
 class Vehicle:
@@ -102,29 +102,54 @@ class Vehicle:
         vehicles[direction]['road'].append(self)
 
 
-# In[ ]:
+# In[9]:
 
 
 # Initialization of signals with default values
 def initialize():
 
-    ts1 = TrafficSignal(0, defaultYellow, defaultGreen,
-                        defaultMinimum, defaultMaximum)
+    # static system
+    ts1 = TrafficSignal(0, 5, 60)
     signals.append(ts1)
-    ts2 = TrafficSignal(ts1.red+ts1.yellow+ts1.green, defaultYellow,
-                        defaultGreen, defaultMinimum, defaultMaximum)
+    ts2 = TrafficSignal(65, 5, 60)
     signals.append(ts2)
-    ts3 = TrafficSignal(defaultRed, defaultYellow,
-                        defaultGreen, defaultMinimum, defaultMaximum)
+    ts3 = TrafficSignal(130, 5, 60)
     signals.append(ts3)
-    ts4 = TrafficSignal(defaultRed, defaultYellow,
-                        defaultGreen, defaultMinimum, defaultMaximum)
+    ts4 = TrafficSignal(195, 5, 60)
     signals.append(ts4)
+
+    # dynamic system1
+    #     ts1 = TrafficSignal(0, defaultYellow, defaultGreen,
+    #                         defaultMinimum, defaultMaximum)
+    #     signals.append(ts1)
+    #     ts2 = TrafficSignal(ts1.red+ts1.yellow+ts1.green, defaultYellow,
+    #                         defaultGreen, defaultMinimum, defaultMaximum)
+    #     signals.append(ts2)
+    #     ts3 = TrafficSignal(defaultRed, defaultYellow,
+    #                         defaultGreen, defaultMinimum, defaultMaximum)
+    #     signals.append(ts3)
+    #     ts4 = TrafficSignal(defaultRed, defaultYellow,
+    #                         defaultGreen, defaultMinimum, defaultMaximum)
+    #     signals.append(ts4)
+
+    # dynamic system2
+    # ts1 = TrafficSignal(0, defaultYellow, defaultGreen,
+    #                     defaultMinimum, defaultMaximum)
+    # signals.append(ts1)
+    # ts2 = TrafficSignal(ts1.red+ts1.yellow+ts1.green, defaultYellow,
+    #                     defaultGreen, defaultMinimum, defaultMaximum)
+    # signals.append(ts2)
+    # ts3 = TrafficSignal(130, defaultYellow,
+    #                     defaultGreen, defaultMinimum, defaultMaximum)
+    # signals.append(ts3)
+    # ts4 = TrafficSignal(195, defaultYellow,
+    #                     defaultGreen, defaultMinimum, defaultMaximum)
+    # signals.append(ts4)
 
     repeat()
 
 
-# In[ ]:
+# In[10]:
 
 
 def setTime():
@@ -164,19 +189,23 @@ def setTime():
 
     vehicles[directionNumbers[nextGreen]]['crossed'] += total_vehicles
 
-    greenTime = math.ceil(((noOfCars*carTime) + (noOfRickshaws*rickshawTime) + (
-        noOfBuses*busTime) + (noOfTrucks*truckTime) + (noOfBikes*bikeTime))/(noOfLanes+1))
+    # greenTime = math.ceil(((noOfCars*carTime) + (noOfRickshaws*rickshawTime) + (
+    #     noOfBuses*busTime) + (noOfTrucks*truckTime) + (noOfBikes*bikeTime))/(noOfLanes+1))
 
-    print('Green Time: ', greenTime)
-    if(greenTime < defaultMinimum):
-        greenTime = defaultMinimum
-    elif(greenTime > defaultMaximum):
-        greenTime = defaultMaximum
+    # print('Green Time: ', greenTime)
+    # if(greenTime < defaultMinimum):
+    #     greenTime = defaultMinimum
+    # elif(greenTime > defaultMaximum):
+    #     greenTime = defaultMaximum
 
-    signals[(currentGreen+1) % (noOfSignals)].green = greenTime
+    # signals[(nextGreen) % (noOfSignals)].green = greenTime
+    # buffer = defaultMaximum - greenTime
+
+    # signals[(nextGreen + 1) % (noOfSignals)].red -= buffer
+    # signals[(nextGreen + 2) % (noOfSignals)].red -= buffer
 
 
-# In[ ]:
+# In[11]:
 
 
 def repeat():
@@ -207,9 +236,13 @@ def repeat():
     currentYellow = 0   # set yellow signal off
 
     # reset all signal times of current signal to default times
-    signals[currentGreen].green = defaultGreen
-    signals[currentGreen].yellow = defaultYellow
-    signals[currentGreen].red = defaultRed
+    # signals[currentGreen].green = defaultGreen
+    # signals[currentGreen].yellow = defaultYellow
+    # signals[currentGreen].red = defaultRed
+
+    signals[currentGreen].green = 60
+    signals[currentGreen].yellow = 5
+    signals[currentGreen].red = 195
 
     currentGreen = nextGreen  # set next signal as green signal
     nextGreen = (currentGreen+1) % noOfSignals    # set next green signal
@@ -226,7 +259,7 @@ def repeat():
     repeat()
 
 
-# In[ ]:
+# In[12]:
 
 
 # Print the signal timers on cmd
@@ -247,7 +280,7 @@ def printStatus():
     print()
 
 
-# In[ ]:
+# In[13]:
 
 
 # Update values of the signal timers after every second
@@ -265,7 +298,7 @@ def updateValues():
             signals[i].red -= 1
 
 
-# In[ ]:
+# In[14]:
 
 
 def generateVehicles():
@@ -275,7 +308,6 @@ def generateVehicles():
         vehicle_type = random.randint(0, 4)
 
         direction_number = random.randint(0, 3)
-        # direction_number = random.randint(0, 0)
 
         Vehicle(vehicleTypes[vehicle_type], direction_number,
                 directionNumbers[direction_number])
@@ -283,7 +315,7 @@ def generateVehicles():
         time.sleep(1)
 
 
-# In[ ]:
+# In[15]:
 
 
 def simulationTime():
@@ -294,7 +326,6 @@ def simulationTime():
         timeElapsed += 1
         time.sleep(1)
         if(timeElapsed == simTime):
-            # time.sleep(1)
             totalVehicles = 0
             print('Lane-wise Vehicle Counts')
 
@@ -310,7 +341,7 @@ def simulationTime():
             os._exit(1)
 
 
-# In[ ]:
+# In[16]:
 
 
 class Main:
@@ -330,6 +361,7 @@ class Main:
     thread3.daemon = True
     thread3.start()
 
+    main()
 
-main()
+
 # In[ ]:
