@@ -4,7 +4,9 @@
 # In[1]:
 
 
+# from ast import main
 from ast import main
+import asyncio
 import random
 import math
 import time
@@ -344,7 +346,7 @@ def simulationTime():
 # In[16]:
 
 
-class Main:
+class Main():
 
     thread1 = threading.Thread(
         name="simulationTime", target=simulationTime, args=())
@@ -361,7 +363,11 @@ class Main:
     thread3.daemon = True
     thread3.start()
 
-    main()
+main()
+
+
+
+
 
 
 # In[ ]:
