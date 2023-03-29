@@ -117,7 +117,7 @@ weatherData = {
   'Dust': 0.1,
   'Tornado': 0,
   'clear sky': 1,
-  'Few clouds': 0.8,
+  'few clouds': 0.8,
   'Scattered clouds': 0.7,
   'Broken clouds': 0.5,
   'overcast clouds': 0.3
