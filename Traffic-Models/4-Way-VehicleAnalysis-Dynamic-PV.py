@@ -3,6 +3,7 @@
 
 # In[1]:
 
+import argparse
 import requests
 import random
 import math
@@ -53,8 +54,12 @@ congestion = []
 noOfSignals = 4
 simTime = 400       # total simulation time
 timeElapsed = 0
+
+totalWaitTime = 0
+
 weightage = 0.33
 hotspot_region = False
+traffic_distribution = []
 
 # In[4]:
 
@@ -73,7 +78,7 @@ rickshawTime = 2          # 60km/h
 busTime = 2.5            # 45km/h
 truckTime = 2.5           # 45km/h
 ambulanceTime = 1
-fireTruckTime = 2
+fireTruckTime = 1
 policeCarTime = 1
 
 # In[5]:
@@ -99,7 +104,7 @@ detectionTime = 5
 
 speeds = {'car': 2.25, 'bus': 1.8, 'truck': 1.8,
           'rickshaw': 2, 'bike': 2.5,
-          'ambulance': 3, 'fireTruck': 2}  # average speeds of vehicles
+          'ambulance': 3, 'fireTruck': 3}  # average speeds of vehicles
 
 
 # weather , congestion, 
@@ -107,7 +112,7 @@ weatherData = {
   
   'Thunderstorm': 0,
   'Drizzle': 0.3,
-  'Rain': 0.4,
+  'rain': 0.4,
   'Snow': 0.3,
   'Mist': 0.4,
   'Smoke': 0.2,
@@ -229,6 +234,7 @@ class Vehicle(pygame.sprite.Sprite):
         self.y = y[direction][lane]
         self.direction_number = direction_number
         self.active = active
+        self.wait_time = 0
         self.direction = direction
         self.crossed = 0
         self.willTurn = will_turn
@@ -796,7 +802,7 @@ def repeat():
     
     global currentGreen, currentYellow, nextGreen
 
-    # skipTime = 5
+
     while(signals[currentGreen].green > 0):
         
         if(Emergency==True and len(activePriorityVehicles) == 1):
@@ -836,8 +842,6 @@ def repeat():
         updateValues()
         time.sleep(1)
         
-        
-
     currentYellow = 0   # set yellow signal off
 
        
@@ -863,7 +867,7 @@ def repeat():
 
 def findActivePriorityVehicles():
     
-    global Emergency,activePriorityVehicles
+    global Emergency,activePriorityVehicles,totalWaitTime
     while(True):
         priorityVehicleList = []
 
@@ -872,11 +876,17 @@ def findActivePriorityVehicles():
                     for k in range(len(vehicles[directionNumbers[i]][j])):
                         vehicle = vehicles[directionNumbers[i]][j][k]
                         vclass = vehicle.vehicleClass
-                        if(vehicle.crossed == 0 and (vclass == "ambulance") and vehicle.active == True):
+                        if(vehicle.crossed == 0 and (vclass == "ambulance" or vclass== "fireTruck") and vehicle.active == True):
                             priorityVehicleList.append(vehicle)
         
         activePriorityVehicles = priorityVehicleList
         
+        # if len(activePriorityVehicles)>0:
+        #     for i in range(0,len(activePriorityVehicles)):
+        #         vehicle = activePriorityVehicles[i]
+        #         if priorityVehicleDetectedThroughGPS(vehicle):
+        #             vehicle.wait_time += 1
+            
         print("Active List Length -> ",len(activePriorityVehicles))     
         
         if(len(activePriorityVehicles) == 1):
@@ -1186,23 +1196,26 @@ def priorityVehicleDetectedThroughGPS(vehicle):
     # print("-------------------Vehicle Crossed -----------------")
     # return False
 
-    WIDTH, HEIGHT = pygame.display.get_surface().get_size()
-    if(vehicle.crossed == 0 and (vehicle.x >= 0 and vehicle.x <= WIDTH) and (vehicle.y >=0 and vehicle.y <= HEIGHT)):
-        if((directionNumbers[currentGreen] == 'right' and
-            vehicle.x + vehicle.currentImage.get_rect().width < stopLines[directionNumbers[currentGreen]]) or
-            (directionNumbers[currentGreen] == 'down' and
-            vehicle.y + vehicle.currentImage.get_rect().height < stopLines[directionNumbers[currentGreen]]) or
-            (directionNumbers[currentGreen] == 'left' and
-            vehicle.x > stopLines[directionNumbers[currentGreen]]) or
-            (directionNumbers[currentGreen] == 'up' and
-            vehicle.y > stopLines[directionNumbers[currentGreen]])):
+    # print("current green = ",currentGreen)
+    # print("direction = ",directionNumbers[currentGreen])
+    # print("Stoplines = ",stopLines[directionNumbers[currentGreen]])
+    direction = directionNumbers[vehicle.direction_number]
+    # WIDTH, HEIGHT = pygame.display.get_surface().get_size()
 
-            # Priority vehicle has crossed the signal
-            # print("Vehicle at point (true) -->",(vehicle.x,vehicle.y))
+    if(vehicle.crossed == 0):
+        if((direction == 'right' and (vehicle.x + vehicle.currentImage.get_rect().width) < stopLines[direction]) or
+            (direction == 'down' and (vehicle.y + vehicle.currentImage.get_rect().height) < stopLines[direction]) or
+            (direction == 'left' and (vehicle.x - vehicle.currentImage.get_rect().width) > stopLines[direction]) or
+            (direction == 'up' and (vehicle.y - vehicle.currentImage.get_rect().height) > stopLines[direction])):
+
+            # Priority vehicle has not crossed the signal
+            print("Vehicle at point (true) -->",(vehicle.x,vehicle.y,vehicle.currentImage.get_rect().height))
+
             print("-------------- Vehicle Not Crossed ---------------------")
             return True
     
     # print("Vehicle at point (false) -->",(vehicle.x,vehicle.y))
+    print("Vehicle at point (False) -->",(vehicle.x,vehicle.y,vehicle.currentImage.get_rect().height))
     print("-------------------Vehicle Crossed -----------------")
     vehicle.crossed = 1
     return False
@@ -1210,7 +1223,7 @@ def priorityVehicleDetectedThroughGPS(vehicle):
 
 def HandlePriorityVehicleThroughGPS(vehicle):
 
-    global currentGreen, Emergency, currentYellow, nextGreen
+    global currentGreen, Emergency, currentYellow, nextGreen, totalWaitTime
     
     if(currentGreen == vehicle.direction_number):
         
@@ -1218,11 +1231,14 @@ def HandlePriorityVehicleThroughGPS(vehicle):
             
             # PV at a yellow signal 
             print(f"---------------------Handling at light Yellow {vehicle.direction_number}-----------------------")
+            
+            # print("Inital Time = ",timeElapsed)
+            # initialTime = timeElapsed
             currentYellow = 0
             bufferTime = defaultYellow
             signals[currentGreen].green = defaultMaximum
             signals[currentGreen].yellow = defaultYellow
-
+            
             while(signals[currentGreen].green > defaultMinimum):
                 
                 printStatus()
@@ -1242,6 +1258,11 @@ def HandlePriorityVehicleThroughGPS(vehicle):
     
                 time.sleep(1)
             
+            # finalTime = timeElapsed
+            # print("Final time = ",timeElapsed)
+            # totalWaitTime += (finalTime - initialTime)
+            # vehicle.wait_time += (finalTime - initialTime)
+            # print("Vehicle Time = ",vehicle.wait_time)
             Emergency = False
             signals[nextGreen % noOfSignals].red = signals[currentGreen].green + signals[currentGreen].yellow
             signals[(nextGreen + 1) % (noOfSignals)].red = defaultMaximum + defaultYellow + signals[nextGreen % noOfSignals].red
@@ -1257,8 +1278,8 @@ def HandlePriorityVehicleThroughGPS(vehicle):
             #     printStatus()
             #     updateValues()
             #     time.sleep(1)
-                
-        
+            # print("Initial Time = ",timeElapsed)
+            # initialTime = timeElapsed
             bufferTime = defaultYellow
             signals[currentGreen].green  = defaultMaximum
             
@@ -1283,7 +1304,11 @@ def HandlePriorityVehicleThroughGPS(vehicle):
                 
                 time.sleep(1)
                 
-            
+            # finalTime = timeElapsed
+            # print("Final Time = ",timeElapsed)
+            # totalWaitTime += (finalTime - initialTime)
+            # vehicle.wait_time += (finalTime - initialTime)
+            # print("Vehicle Time = ",vehicle.wait_time)
             Emergency = False
             signals[nextGreen % noOfSignals].red = signals[currentGreen].green + signals[currentGreen].yellow
             signals[(nextGreen + 1) % (noOfSignals)].red = defaultMaximum + defaultYellow + signals[nextGreen % noOfSignals].red
@@ -1296,7 +1321,9 @@ def HandlePriorityVehicleThroughGPS(vehicle):
     elif(nextGreen == vehicle.direction_number):
 
         print(f"-------------------------Handling at Next Green {vehicle.direction_number} -----------------------")
-
+        
+        # initialTime = timeElapsed
+        # print("Inital Time = ",timeElapsed)
         if(signals[currentGreen].green> defaultMinimum):
             signals[currentGreen].green = defaultMinimum
             
@@ -1360,6 +1387,11 @@ def HandlePriorityVehicleThroughGPS(vehicle):
             time.sleep(1)
         
         # print("timer = ",signals[currentGreen].green)
+        # print("Final Time = ",timeElapsed)
+        # finalTime = timeElapsed
+        # totalWaitTime += (finalTime - initialTime)
+        # vehicle.wait_time += (finalTime - initialTime)
+        # print("Vehicle Time = ",vehicle.wait_time)
         Emergency = False
         signals[nextGreen % noOfSignals].red = signals[currentGreen].green + signals[currentGreen].yellow
         signals[(nextGreen + 1) % (noOfSignals)].red = defaultMaximum + defaultYellow + signals[nextGreen % noOfSignals].red
@@ -1371,8 +1403,10 @@ def HandlePriorityVehicleThroughGPS(vehicle):
     else:
         
         print(f"-------------------------Handling at light Red {vehicle.direction_number} ---------------------------")
-        prioritySignal = vehicle.direction_number
         
+        # initialTime = timeElapsed
+        # print("Initial Time = ",timeElapsed)
+        prioritySignal = vehicle.direction_number
         if(signals[currentGreen].green> defaultMinimum):
             signals[currentGreen].green = defaultMinimum
         
@@ -1421,7 +1455,7 @@ def HandlePriorityVehicleThroughGPS(vehicle):
                     signals[prioritySignal].green -= 1
                     
                 else:
-                    # green signal is 10 and PV is not detected
+                    # PV is not detected
                     if signals[prioritySignal].green > defaultMinimum:
                         signals[prioritySignal].green = defaultMinimum
                     break
@@ -1432,7 +1466,11 @@ def HandlePriorityVehicleThroughGPS(vehicle):
 
             time.sleep(1)
         
-        
+        # finalTime = timeElapsed
+        # print("Final Time",timeElapsed)
+        # totalWaitTime += (finalTime - initialTime)
+        # vehicle.wait_time += (finalTime - initialTime)
+        # print("Vehicle Time = ",vehicle.wait_time)
         Emergency = False
         signals[nextGreen % noOfSignals].red = signals[prioritySignal].green + signals[prioritySignal].yellow
         signals[(nextGreen + 1) % (noOfSignals)].red = defaultMaximum + defaultYellow + signals[nextGreen % noOfSignals].red
@@ -1555,10 +1593,15 @@ def calculatetrustDynamic():
 def directionNumberFromDistribution():
 
     global distribution
-
-    distribution = [700, 800, 900, 1000]
+    
+    
+    if len(traffic_distribution) == 0:
+        distribution = [250,500,750,1000]
+    else:
+        distribution = traffic_distribution
     # deciding the direction_number from
     # a range of values from 1 to 1000
+    
     temp = random.randint(0, 999)
     direction_number = 0
     calculatetrustDynamic()
@@ -1596,7 +1639,9 @@ def directionNumberFromtrustDynamicScores():
 def congestionInfo():
     
     while(True):
-
+        
+        traffic = []
+        sum = 0
         for i in range(0,noOfSignals):
             
             s_lat = congestion[i].src_lat
@@ -1627,6 +1672,10 @@ def congestionInfo():
                 minutes = int(re.findall(r'\d+', congestionTime)[0])
                 scaled_time = minutes/60  # 0 to 1
                 congestion[i].congestion_score = round((1.00 - scaled_time)*weightage,2)
+                sum += minutes
+                traffic.append(sum)
+                
+
                 # print("Google congestion = ",round((1.00 - scaled_time)*weightage,2))
                 # congestion[i].trust_dynamic += round((1.00 - scaled_time)*weightage,2)
             else:
@@ -1648,21 +1697,25 @@ def congestionInfo():
             
             description = data2['weather'][0]['description']
             for key in weatherData:
-                if description in key:
-                    congestion[i].weather_score = round((weatherData[description])*weightage,2)
+                if key.lower() in str(description).lower():
+                    congestion[i].weather_score = round((weatherData[key])*weightage,2)
                     # print("Weather Api = ",round((weatherData[description])*weightage,2))
                     # congestion[i].trust_dynamic += round((weatherData[description])*weightage,2)
                     break
             
             congestion[i].weather_description = description
         
+        # print("traffic ==>",traffic)
+        if len(traffic_distribution) == 0:
+            for i in range(noOfSignals):
+                traffic_distribution.append(round((traffic[i]*1000)/sum,2))
         time.sleep(60)
 
 
 
 def simulationTime():
 
-    global timeElapsed, simTime
+    global timeElapsed, simTime, totalWaitTime
     while(True):
 
         timeElapsed += 1
@@ -1679,28 +1732,50 @@ def simulationTime():
             for i in range(noOfSignals):
                 print('Lane', i+1, ':',
                       vehicles[directionNumbers[i]]['crossed'])
-                data.append(vehicles[directionNumbers[i]]['crossed'])
+                # data.append(vehicles[directionNumbers[i]]['crossed'])
                 totalVehicles += vehicles[directionNumbers[i]]['crossed']
+            
+            ###############################################################
+            # totalPriorityVehiclesCrossed = 0
+            
+            # for i in range(noOfSignals):
+            #     for j in range(roadLanes):
+            #         for k in range(len(vehicles[directionNumbers[i]][j])):
+            #             vehicle = vehicles[directionNumbers[i]][j][k]
+            #             if(vehicle.active == True and vehicle.crossed == 1):
+            #                 # print("Class = ",vehicle.vehicleClass)
+            #                 # print("Wait -->",vehicle.wait_time)
+            #                 totalWaitTime += vehicle.wait_time
+            #                 totalPriorityVehiclesCrossed += 1
+
+            # data.append(totalWaitTime)
+            # data.append(totalPriorityVehiclesCrossed)
+            # data.append(totalVehicles)
+            
+            # with open('../data/CaseStudy/PriorityAnalysis/4-Way-Analysis-Dynamic-Normal-Case-6.csv', 'a', newline='') as f:
+            #     writer = csv.writer(f)
+            #     writer.writerow(data)
+            ###############################################################
 
             # data.append(totalVehicles)
             # with open('../data/4.11-Way-Analysis-Dynamic.csv', 'a', newline='') as f:
             #     writer = csv.writer(f)
             #     writer.writerow(data)
 
-            trustScoreData.append(distribution[0]/1000)
-            trustScoreData.append((distribution[1] - distribution[0])/1000)
-            trustScoreData.append((distribution[2] - distribution[1])/1000)
-            trustScoreData.append((distribution[3] - distribution[2])/1000)
+            # trustScoreData.append(distribution[0]/1000)
+            # trustScoreData.append((distribution[1] - distribution[0])/1000)
+            # trustScoreData.append((distribution[2] - distribution[1])/1000)
+            # trustScoreData.append((distribution[3] - distribution[2])/1000)
 
-            for i in range(noOfSignals):
+            # for i in range(noOfSignals):
 
-                vehicleCrossedOnOneSide = vehicles[directionNumbers[i]]['crossed']
-                value = round(vehicleCrossedOnOneSide/totalVehicles, 2)
-                trustScoreData.append(value)
+            #     vehicleCrossedOnOneSide = vehicles[directionNumbers[i]]['crossed']
+            #     value = round(vehicleCrossedOnOneSide/totalVehicles, 2)
+            #     trustScoreData.append(value)
 
-            with open('./trustScore.csv', 'a', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(trustScoreData)
+            # with open('../data/CaseStudy/TrustScore', 'a', newline='') as f:
+            #     writer = csv.writer(f)
+            #     writer.writerow(trustScoreData)
 
             print('Total vehicles passed: ', totalVehicles)
             print('Total time passed: ', timeElapsed)
@@ -1735,16 +1810,16 @@ def generateVehicles():
 
         # using the fixed distribution to distribute vehicles in simulation
 
-        if vehicle_type == 5:
-            direction_number = 0
-        else:
+        # if vehicle_type == 5:
+        #     direction_number = 0
+        # else:
              # using variable distribution to distribute vehicles in simulation
             # direction_number = directionNumberFromtrustDynamicScores()
-            direction_number = directionNumberFromDistribution()
+        direction_number = directionNumberFromDistribution()
 
         # print(direction_number)
         Vehicle(lane_number, vehicleTypes[vehicle_type], direction_number,
-                directionNumbers[direction_number], will_turn, (vehicle_type == 5))
+                directionNumbers[direction_number], will_turn, (vehicle_type == 5 or vehicle_type == 6))
 
         time.sleep(1)
 
@@ -1759,11 +1834,11 @@ def trustScoreDataCollection():
     #     writer = csv.writer(f)
     #     # write the header
     #     writer.writerow(header)
-
+    
     '''
     Reading possible trust scores already available
     '''
-    with open('./trustScore.csv', 'r') as csvfile:
+    with open('../data/CaseStudy/TrustScore/trustScore.csv', 'r') as csvfile:
         csv_dict = [row for row in csv.DictReader(csvfile)]
         if len(csv_dict) == 0:
             print('csv file is empty')
@@ -1775,7 +1850,6 @@ def trustScoreDataCollection():
                 idx += 1
 
             # In[ ]:
-
 
 
 # Checkbox class
@@ -1799,8 +1873,22 @@ class Checkbox:
             if self.rect.collidepoint(event.pos):
                 self.checked = not self.checked
 
-class Main:
+def Main():
     
+    # create an argument parser
+    # parser = argparse.ArgumentParser(description="Example script")
+
+    # # add a command-line argument for the flag variable
+    # parser.add_argument("-f", "--flag", action="store_true", help="a flag variable")
+
+    # # parse the command-line arguments
+    # args = parser.parse_args()
+
+    # # access the value of the flag variable
+    # spawnFlag = args.flag
+
+    # print(spawnFlag)
+
     global hotspot_region
 
     thread1 = threading.Thread(
@@ -1814,7 +1902,12 @@ class Main:
     thread2.daemon = True
     thread2.start()
     
-   
+    
+    thread6 = threading.Thread(
+    name="congestion", target=congestionInfo, args=())
+    thread6.daemon = True
+    thread6.start()
+
     # Colours
     black = (0, 0, 0)
     white = (255, 255, 255)
@@ -1858,12 +1951,12 @@ class Main:
     thread5.daemon = True
     thread5.start()
         
-    trustScoreDataCollection()
+    # trustScoreDataCollection()
 
-    thread6 = threading.Thread(
-    name="congestion", target=congestionInfo, args=())
-    thread6.daemon = True
-    thread6.start()
+    # thread6 = threading.Thread(
+    # name="congestion", target=congestionInfo, args=())
+    # thread6.daemon = True
+    # thread6.start()
 
     FPS = 60
     clock = pygame.time.Clock()
@@ -1986,9 +2079,11 @@ class Main:
             screen.blit(vehicle.currentImage, [vehicle.x, vehicle.y])
             vehicle.move()
 
+        
         pygame.display.update()
     
 
+# if __name__ == "main":
 Main()
 
 
