@@ -17,7 +17,7 @@ import pandas as pd
 import csv
 from dotenv import load_dotenv
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY1")
 OPEN_WEATHER_API_KEY = os.getenv("OPEN_WEATHER_API_KEY")
 
 
@@ -805,7 +805,7 @@ def repeat():
 
     while(signals[currentGreen].green > 0):
         
-        if(Emergency==True and len(activePriorityVehicles) == 1):
+        if(Emergency == True and len(activePriorityVehicles) == 1):
             vehicle = activePriorityVehicles[0]
             HandlePriorityVehicleThroughGPS(vehicle)
             break
@@ -1190,23 +1190,18 @@ def priorityVehicleDetectedThroughGPS(vehicle):
     # detecting using GPS if the
     # priority vehicle is present or not
     
-    # if(vehicle.crossed == 0):
-    #     print("-------------- Vehicle Not Crossed ---------------------")
-    #     return True
-    # print("-------------------Vehicle Crossed -----------------")
-    # return False
 
-    # print("current green = ",currentGreen)
-    # print("direction = ",directionNumbers[currentGreen])
-    # print("Stoplines = ",stopLines[directionNumbers[currentGreen]])
+    # print("Ambulance direction number -->", vehicle.direction_number)
     direction = directionNumbers[vehicle.direction_number]
+    stop_line = stopLines[direction]
     # WIDTH, HEIGHT = pygame.display.get_surface().get_size()
-
+    # print("Ambulance direction -->",direction)
+    # print("Vehicle -->",vehicle.vehicleClass)
     if(vehicle.crossed == 0):
-        if((direction == 'right' and (vehicle.x + vehicle.currentImage.get_rect().width) < stopLines[direction]) or
-            (direction == 'down' and (vehicle.y + vehicle.currentImage.get_rect().height) < stopLines[direction]) or
-            (direction == 'left' and (vehicle.x - vehicle.currentImage.get_rect().width) > stopLines[direction]) or
-            (direction == 'up' and (vehicle.y - vehicle.currentImage.get_rect().height) > stopLines[direction])):
+        if((direction == 'right' and (vehicle.x + vehicle.currentImage.get_rect().width) < stop_line) or
+            (direction == 'down' and (vehicle.y + vehicle.currentImage.get_rect().height) < stop_line) or
+            (direction == 'left' and (vehicle.x) > stop_line) or
+            (direction == 'up' and (vehicle.y) > stop_line)):
 
             # Priority vehicle has not crossed the signal
             print("Vehicle at point (true) -->",(vehicle.x,vehicle.y,vehicle.currentImage.get_rect().height))
@@ -1225,12 +1220,16 @@ def HandlePriorityVehicleThroughGPS(vehicle):
 
     global currentGreen, Emergency, currentYellow, nextGreen, totalWaitTime
     
-    if(currentGreen == vehicle.direction_number):
+    # print("Ambulance type -->", vehicle.vehicleClass)
+    # print("Ambulance direction number -->", vehicle.direction_number)
+    
+    priorityVehicle = vehicle
+    if(currentGreen == priorityVehicle.direction_number):
         
         if(signals[currentGreen].green == 0 and signals[currentGreen].yellow > 0):
             
             # PV at a yellow signal 
-            print(f"---------------------Handling at light Yellow {vehicle.direction_number}-----------------------")
+            print(f"---------------------Handling at light Yellow {priorityVehicle.direction_number}-----------------------")
             
             # print("Inital Time = ",timeElapsed)
             # initialTime = timeElapsed
@@ -1245,7 +1244,7 @@ def HandlePriorityVehicleThroughGPS(vehicle):
                 
                 if(bufferTime == 0):
 
-                    if priorityVehicleDetectedThroughGPS(vehicle):    
+                    if priorityVehicleDetectedThroughGPS(priorityVehicle):    
                         bufferTime = defaultYellow
                         signals[currentGreen].green -= 1
                     else:
@@ -1272,7 +1271,7 @@ def HandlePriorityVehicleThroughGPS(vehicle):
 
         else:
             # PV at a green signal
-            print(f"-------------------------Handling at light Green {vehicle.direction_number}--------------------------")
+            print(f"-------------------------Handling at light Green {priorityVehicle.direction_number}--------------------------")
 
             # while(signals[currentGreen].green > defaultMinimum):
             #     printStatus()
@@ -1289,7 +1288,7 @@ def HandlePriorityVehicleThroughGPS(vehicle):
                 
                 if(bufferTime == 0):
 
-                    if priorityVehicleDetectedThroughGPS(vehicle):    
+                    if priorityVehicleDetectedThroughGPS(priorityVehicle):    
                         bufferTime = defaultYellow
                         signals[currentGreen].green -= 1
                         
@@ -1318,9 +1317,9 @@ def HandlePriorityVehicleThroughGPS(vehicle):
 
             
 
-    elif(nextGreen == vehicle.direction_number):
+    elif(nextGreen == priorityVehicle.direction_number):
 
-        print(f"-------------------------Handling at Next Green {vehicle.direction_number} -----------------------")
+        print(f"-------------------------Handling at Next Green {priorityVehicle.direction_number} -----------------------")
         
         # initialTime = timeElapsed
         # print("Inital Time = ",timeElapsed)
@@ -1371,7 +1370,7 @@ def HandlePriorityVehicleThroughGPS(vehicle):
             
             if(bufferTime == 0):
 
-                if priorityVehicleDetectedThroughGPS(vehicle):    
+                if priorityVehicleDetectedThroughGPS(priorityVehicle):    
                     bufferTime = defaultYellow
                     signals[currentGreen].green -= 1
                 else:
@@ -1402,11 +1401,11 @@ def HandlePriorityVehicleThroughGPS(vehicle):
     # PV at a red signal
     else:
         
-        print(f"-------------------------Handling at light Red {vehicle.direction_number} ---------------------------")
+        print(f"-------------------------Handling at light Red {priorityVehicle.direction_number} ---------------------------")
         
         # initialTime = timeElapsed
         # print("Initial Time = ",timeElapsed)
-        prioritySignal = vehicle.direction_number
+        prioritySignal = priorityVehicle.direction_number
         if(signals[currentGreen].green> defaultMinimum):
             signals[currentGreen].green = defaultMinimum
         
@@ -1450,7 +1449,7 @@ def HandlePriorityVehicleThroughGPS(vehicle):
             printStatus()
             
             if(bufferTime == 0):
-                if priorityVehicleDetectedThroughGPS(vehicle):    
+                if priorityVehicleDetectedThroughGPS(priorityVehicle):    
                     bufferTime = defaultYellow
                     signals[prioritySignal].green -= 1
                     
@@ -1793,8 +1792,8 @@ def generateVehicles():
             vehicle_type = random.randint(0,4)
 
 
-        # if(timeElapsed % 30 == 0):
-        #     vehicle_type = 5
+        if(timeElapsed % 30 == 0):
+            vehicle_type = 5
         
         lane_number = random.randint(0, 2)
 
@@ -1811,13 +1810,15 @@ def generateVehicles():
         # using the fixed distribution to distribute vehicles in simulation
 
         # if vehicle_type == 5:
-        #     direction_number = 0
+        #     direction_number = 3
+        # else:
         # else:
              # using variable distribution to distribute vehicles in simulation
             # direction_number = directionNumberFromtrustDynamicScores()
         direction_number = directionNumberFromDistribution()
 
         # print(direction_number)
+
         Vehicle(lane_number, vehicleTypes[vehicle_type], direction_number,
                 directionNumbers[direction_number], will_turn, (vehicle_type == 5 or vehicle_type == 6))
 
