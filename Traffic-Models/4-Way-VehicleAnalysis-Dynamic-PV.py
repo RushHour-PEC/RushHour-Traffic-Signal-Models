@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 # coding: utf-8
 
 # In[1]:
@@ -16,9 +16,74 @@ import sys
 import pandas as pd
 import csv
 from dotenv import load_dotenv
+
+
+
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import db
+import socketio
+import eventlet
+
+
+
+
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY1")
 OPEN_WEATHER_API_KEY = os.getenv("OPEN_WEATHER_API_KEY")
+
+
+
+
+
+
+# Firebase initialization
+cred = credentials.Certificate("rushhour-71742-firebase-adminsdk-kwqui-39bc3712c9.json")
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://rushhour-71742-default-rtdb.asia-southeast1.firebasedatabase.app/'
+})
+
+
+
+
+
+
+
+priority_vehicle_flag = False
+
+def update_flag_value():
+    global priority_vehicle_flag
+    priority_vehicle_flag = True
+    print(priority_vehicle_flag)
+
+
+
+
+
+# Define a function to listen for changes to the "flag" variable
+def listen_for_flag_changes():
+    flag_ref = db.reference('flag')
+    flag_listener = flag_ref.listen(lambda event: update_flag_value())
+
+# Start the listener in a new thread
+listener_thread = threading.Thread(target=listen_for_flag_changes)
+listener_thread.start()
+
+
+
+
+
+# # Define a function to listen for changes to the "flag" variable
+# def listen_for_flag_changes():
+#     flag_ref = db.reference('flag')
+#     flag_listener = flag_ref.listen(lambda event: print(f'The value of "flag" has been changed to {event.data}'))
+
+# # Start the listener using eventlet
+# greenthread.spawn(listen_for_flag_changes)
+
+
+
+
 
 
 
@@ -1783,6 +1848,7 @@ def simulationTime():
 
 
 def generateVehicles():
+    global priority_vehicle_flag
 
     while(True):
 
@@ -1795,6 +1861,13 @@ def generateVehicles():
         if(timeElapsed % 30 == 0):
             vehicle_type = 5
         
+        if (priority_vehicle_flag == True):
+            vehicle_type = 5
+
+        priority_vehicle_flag = False
+
+
+
         lane_number = random.randint(0, 2)
 
         will_turn = 0
@@ -1922,8 +1995,7 @@ def Main():
     screenSize = (screenWidth, screenHeight)
 
     # Setting background image i.e. image of intersection
-    background = pygame.image.load(
-        '../images/intersection/intersection-4-Way.png')
+    background = pygame.image.load('../images/intersection/intersection-4-Way.png')
 
     screen = pygame.display.set_mode(screenSize, pygame.RESIZABLE)
     pygame.display.set_caption("TRAFFIC SIMULATION")
@@ -2084,11 +2156,12 @@ def Main():
         pygame.display.update()
     
 
+
+
+
 # if __name__ == "main":
 Main()
 
 
 # In[ ]:
 
-
-# In[ ]:
