@@ -16,36 +16,20 @@ import sys
 import pandas as pd
 import csv
 from dotenv import load_dotenv
-
-
-
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
-import socketio
-import eventlet
-
-
-
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY1")
 OPEN_WEATHER_API_KEY = os.getenv("OPEN_WEATHER_API_KEY")
-
-
-
-
-
+DB_URL = os.getenv("DB_URL")
 
 # Firebase initialization
 cred = credentials.Certificate("rushhour-71742-firebase-adminsdk-kwqui-39bc3712c9.json")
 firebase_admin.initialize_app(cred, {
-    'databaseURL': 'https://rushhour-71742-default-rtdb.asia-southeast1.firebasedatabase.app/'
+    'databaseURL': DB_URL
 })
-
-
-
-
 
 
 
@@ -57,34 +41,16 @@ def update_flag_value():
     print(priority_vehicle_flag)
 
 
-
-
-
 # Define a function to listen for changes to the "flag" variable
 def listen_for_flag_changes():
     flag_ref = db.reference('flag')
     flag_listener = flag_ref.listen(lambda event: update_flag_value())
 
-# Start the listener in a new thread
-listener_thread = threading.Thread(target=listen_for_flag_changes)
-listener_thread.start()
-
-
-
-
-
-# # Define a function to listen for changes to the "flag" variable
-# def listen_for_flag_changes():
-#     flag_ref = db.reference('flag')
-#     flag_listener = flag_ref.listen(lambda event: print(f'The value of "flag" has been changed to {event.data}'))
-
-# # Start the listener using eventlet
-# greenthread.spawn(listen_for_flag_changes)
-
-
-
-
-
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        flag_listener.close()
 
 
 # In[2]:
@@ -254,7 +220,9 @@ directionNumbers = {0: 'right', 1: 'down', 2: 'left', 3: 'up'}
 
 pygame.init()
 simulation = pygame.sprite.Group()
-
+pygame.mixer.init()
+sound_file = "../images/ambulance-siren.mp3"
+pygame.mixer.music.load(sound_file)
 
 # In[10]:
 
@@ -681,16 +649,16 @@ def initialize():
     signals.append(ts4)
 
 
-    trustSgnl1 = TrustSignal(30.730232, 76.774572, 30.733102, 76.779132)
+    trustSgnl1 = TrustSignal(30.733102, 76.779132, 30.730232, 76.774572)
     congestion.append(trustSgnl1)
 
-    trustSgnl2 = TrustSignal(30.727993, 76.784416, 30.732824, 76.780174)
+    trustSgnl2 = TrustSignal(30.732824, 76.780174 , 30.727993, 76.784416 )
     congestion.append(trustSgnl2)
 
-    trustSgnl3  = TrustSignal(30.739082, 76.774892, 30.733939, 76.779321)
+    trustSgnl3  = TrustSignal(30.733939, 76.779321, 30.739082, 76.774892)
     congestion.append(trustSgnl3)
 
-    trustSgnl4 = TrustSignal(30.740305, 76.790887, 30.733919, 76.780622)
+    trustSgnl4 = TrustSignal(30.733919, 76.780622, 30.740305, 76.790887)
     congestion.append(trustSgnl4)
 
 
@@ -1255,7 +1223,7 @@ def priorityVehicleDetectedThroughGPS(vehicle):
     # detecting using GPS if the
     # priority vehicle is present or not
     
-
+    
     # print("Ambulance direction number -->", vehicle.direction_number)
     direction = directionNumbers[vehicle.direction_number]
     stop_line = stopLines[direction]
@@ -1287,7 +1255,7 @@ def HandlePriorityVehicleThroughGPS(vehicle):
     
     # print("Ambulance type -->", vehicle.vehicleClass)
     # print("Ambulance direction number -->", vehicle.direction_number)
-    
+    pygame.mixer.music.play()
     priorityVehicle = vehicle
     if(currentGreen == priorityVehicle.direction_number):
         
@@ -1572,6 +1540,9 @@ def HandlePriorityVehicleThroughGPS(vehicle):
         nextGreen = (currentGreen + 1)%noOfSignals
         signals[nextGreen].red = signals[currentGreen].yellow + signals[currentGreen].green
         repeat()
+    
+    pygame.mixer.music.stop()
+
     
 
 # In[15]:
@@ -1858,10 +1829,10 @@ def generateVehicles():
             vehicle_type = random.randint(0,4)
 
 
-        if(timeElapsed % 30 == 0):
-            vehicle_type = 5
+        # if(timeElapsed % 30 == 0):
+        #     vehicle_type = 5
         
-        if (priority_vehicle_flag == True):
+        if priority_vehicle_flag:
             vehicle_type = 5
 
         priority_vehicle_flag = False
@@ -1947,22 +1918,8 @@ class Checkbox:
             if self.rect.collidepoint(event.pos):
                 self.checked = not self.checked
 
-def Main():
+class Main:
     
-    # create an argument parser
-    # parser = argparse.ArgumentParser(description="Example script")
-
-    # # add a command-line argument for the flag variable
-    # parser.add_argument("-f", "--flag", action="store_true", help="a flag variable")
-
-    # # parse the command-line arguments
-    # args = parser.parse_args()
-
-    # # access the value of the flag variable
-    # spawnFlag = args.flag
-
-    # print(spawnFlag)
-
     global hotspot_region
 
     thread1 = threading.Thread(
@@ -2030,6 +1987,11 @@ def Main():
     # name="congestion", target=congestionInfo, args=())
     # thread6.daemon = True
     # thread6.start()
+
+    # Start the listener in a new thread
+    listener_thread = threading.Thread(target=listen_for_flag_changes)
+    listener_thread.daemon = True
+    listener_thread.start()
 
     FPS = 60
     clock = pygame.time.Clock()
