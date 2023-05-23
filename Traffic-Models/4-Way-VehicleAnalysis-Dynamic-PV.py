@@ -1299,6 +1299,7 @@ def HandlePriorityVehicleThroughGPS(vehicle):
             signals[nextGreen % noOfSignals].red = signals[currentGreen].green + signals[currentGreen].yellow
             signals[(nextGreen + 1) % (noOfSignals)].red = defaultMaximum + defaultYellow + signals[nextGreen % noOfSignals].red
             signals[(nextGreen + 2) % (noOfSignals)].red = defaultMaximum + defaultYellow + signals[(nextGreen + 1) % (noOfSignals)].red
+            pygame.mixer.music.stop()
             repeat()
             
 
@@ -1345,7 +1346,7 @@ def HandlePriorityVehicleThroughGPS(vehicle):
             signals[nextGreen % noOfSignals].red = signals[currentGreen].green + signals[currentGreen].yellow
             signals[(nextGreen + 1) % (noOfSignals)].red = defaultMaximum + defaultYellow + signals[nextGreen % noOfSignals].red
             signals[(nextGreen + 2) % (noOfSignals)].red = defaultMaximum + defaultYellow + signals[(nextGreen + 1) % (noOfSignals)].red
-            
+            pygame.mixer.music.stop()
             repeat()
 
             
@@ -1428,6 +1429,7 @@ def HandlePriorityVehicleThroughGPS(vehicle):
         signals[nextGreen % noOfSignals].red = signals[currentGreen].green + signals[currentGreen].yellow
         signals[(nextGreen + 1) % (noOfSignals)].red = defaultMaximum + defaultYellow + signals[nextGreen % noOfSignals].red
         signals[(nextGreen + 2) % (noOfSignals)].red = defaultMaximum + defaultYellow + signals[(nextGreen + 1) % (noOfSignals)].red
+        pygame.mixer.music.stop()
         repeat()
 
 
@@ -1539,9 +1541,10 @@ def HandlePriorityVehicleThroughGPS(vehicle):
         currentGreen = nextGreen
         nextGreen = (currentGreen + 1)%noOfSignals
         signals[nextGreen].red = signals[currentGreen].yellow + signals[currentGreen].green
+        pygame.mixer.music.stop()
         repeat()
     
-    pygame.mixer.music.stop()
+    
 
     
 
